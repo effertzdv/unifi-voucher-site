@@ -5,8 +5,12 @@ Changes so far:
 ## Batch filtering
 Similar to the UNIFI hotspot portal the note ("name") is displayed and can be filtered by
 
+![Vouchers Overview - Desktop](.docs/images/batch_view.png)
+
 ## PDF output with multiple vouchers on a single page
 Added PDF output for a multiple vouchers on multiple A4 pages
+
+![batch printed PDF](.docs/images/pdf_batchprint.png)
 
 ## Minor adjustements
 - the expired status was never shown

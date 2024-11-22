@@ -45,7 +45,7 @@ module.exports = (doc, voucher, x,y, colNum, rowNum) => {
 
     // add logo in upper right corner
     // note: add 2units from top and right to avoid overlapping the dotted rectange (rectTop+2 and fit width -2)
-    doc.image(logoPath, rectLeft + colWidth/2, rectTop+2, {fit: [colWidth/2-2, 75], align: 'left', valign: 'top'});
+    doc.image(logoPath, rectLeft + colWidth/2, rectTop+2, {fit: [colWidth/2-2, 50], align: 'right', valign: 'top'});
     
     // we do not show any quotas here (we don't use that)
 
