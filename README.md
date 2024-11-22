@@ -1,3 +1,22 @@
+# FORKED from main project!
+
+Changes so far:
+
+## Batch filtering
+Similar to the UNIFI hotspot portal the note ("name") is displayed and can be filtered by
+
+## PDF output with multiple vouchers on a single page
+Added PDF output for a multiple vouchers on multiple A4 pages
+
+## Minor adjustements
+- the expired status was never shown
+- multi-use / single-use didn't work correct for vouchers with a limited number of uses. E.g. 4x uses allowed was display as single-use voucher
+- add a variable sitename. This name is added to the header (if defined) - helps to distinguish multiple sites
+
+
+
+--------------------------------------------
+
 # UniFi Voucher Site
 
 UniFi Voucher Site is a web-based platform for generating and managing UniFi network guest vouchers
