@@ -27,6 +27,7 @@ module.exports = {
             if(vouchers) {
                 cache.vouchers = vouchers;
                 cache.updated = new Date().getTime();
+                cache.batches = unifi.batches(vouchers);                
                 log.debug(`[Cache] Saved ${vouchers.length} voucher(s)`);
             }
 

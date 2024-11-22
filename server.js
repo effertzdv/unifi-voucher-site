@@ -235,7 +235,7 @@ if(variables.serviceWeb) {
             if(vouchers) {                
                 cache.vouchers = vouchers;
                 cache.updated = new Date().getTime();
-                cache.batches = unifi.batches(vouchers);
+                cache.batches = unifi.batches(vouchers);                
                 log.info(`[Cache] Saved ${vouchers.length} voucher(s)`);
 
                 res.cookie('flashMessage', JSON.stringify({type: 'info', message: parseInt(req.body['voucher-amount']) > 1 ? `${req.body['voucher-amount']} Vouchers Created!` : `Voucher Created: ${voucherCode}`}), {httpOnly: true, expires: new Date(Date.now() + 24 * 60 * 60 * 1000)}).redirect(302, `${req.headers['x-ingress-path'] ? req.headers['x-ingress-path'] : ''}/vouchers`);
@@ -259,7 +259,7 @@ if(variables.serviceWeb) {
             if(vouchers) {
                 cache.vouchers = vouchers;
                 cache.updated = new Date().getTime();
-                cache.batches = unifi.batches(vouchers);
+                cache.batches = unifi.batches(vouchers);                
                 log.info(`[Cache] Saved ${vouchers.length} voucher(s)`);
 
                 res.cookie('flashMessage', JSON.stringify({type: 'info', message: `Voucher Removed!`}), {httpOnly: true, expires: new Date(Date.now() + 24 * 60 * 60 * 1000)}).redirect(302, `${req.headers['x-ingress-path'] ? req.headers['x-ingress-path'] : ''}/vouchers`);
@@ -481,11 +481,11 @@ if(variables.serviceWeb) {
             });
 
             if(!vouchers) {
-                return;
-            }
+                return;                
+            }            
 
             log.info('[Cache] Requesting UniFi Guests...');
-
+            
             const guests = await unifi.guests().catch((e) => {
                 log.error('[Cache] Error requesting guests!');
                 res.cookie('flashMessage', JSON.stringify({type: 'error', message: e}), {httpOnly: true, expires: new Date(Date.now() + 24 * 60 * 60 * 1000)}).redirect(302, `${req.headers['x-ingress-path'] ? req.headers['x-ingress-path'] : ''}/vouchers`);
@@ -493,19 +493,19 @@ if(variables.serviceWeb) {
 
             if(vouchers && guests) {
                 cache.vouchers = vouchers;
-                cache.guests = guests;
-
-                cache.batches = unifi.batches(vouchers);                
+                cache.guests = guests;                
                 cache.updated = new Date().getTime();
+                cache.batches = unifi.batches(vouchers);
                 log.info(`[Cache] Saved ${vouchers.length} voucher(s)`);
                 log.info(`[Cache] Saved ${guests.length} guest(s)`);
 
+                console.log("batches",cache.batches);
                 res.cookie('flashMessage', JSON.stringify({type: 'info', message: 'Synced Vouchers & Guests!'}), {httpOnly: true, expires: new Date(Date.now() + 24 * 60 * 60 * 1000)}).redirect(302, `${req.headers['x-ingress-path'] ? req.headers['x-ingress-path'] : ''}/vouchers`);
             }
 
             return;
         }
-
+        
         const user = req.oidc ? await req.oidc.fetchUserInfo() : { email: 'admin' };
 
         res.render('voucher', {
