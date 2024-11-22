@@ -13,9 +13,10 @@ const config = require('./config');
  */
 module.exports = {
     unifiIp: config('unifi_ip') || process.env.UNIFI_IP || '192.168.1.1',
-    unifiPort: config('unifi_port') || process.env.UNIFI_PORT || 443,
+    unifiPort: config('unifi_port') || process.env.UNIFI_PORT || 443,    
     unifiUsername: config('unifi_username') || process.env.UNIFI_USERNAME || 'admin',
     unifiPassword: config('unifi_password') || process.env.UNIFI_PASSWORD || 'password',
+    unifiSiteName:config('unifi_sitename') || process.env.UNIFI_SITENAME || 'default',
     unifiSiteId: config('unifi_site_id') || process.env.UNIFI_SITE_ID || 'default',
     unifiSsid: config('unifi_ssid') || process.env.UNIFI_SSID || '',
     unifiSsidPassword: config('unifi_ssid_password') || process.env.UNIFI_SSID_PASSWORD || '',
@@ -44,4 +45,5 @@ module.exports = {
     translationDebug: config('translation_debug') || (process.env.TRANSLATION_DEBUG === 'true') || false,
     gitTag: process.env.GIT_TAG || 'master',
     gitBuild: fs.existsSync('/etc/unifi_voucher_site_build') ? fs.readFileSync('/etc/unifi_voucher_site_build', 'utf-8') : 'Development'
+    
 };

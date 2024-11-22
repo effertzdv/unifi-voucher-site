@@ -18,6 +18,7 @@ const jwt = require('./modules/jwt');
 const info = require('./modules/info');
 const unifi = require('./modules/unifi');
 const print = require('./modules/print');
+const printVoucherList = require('./modules/printvoucherlist');
 const mail = require('./modules/mail');
 const oidc = require('./modules/oidc');
 
@@ -202,8 +203,24 @@ if(variables.serviceWeb) {
             }
         }
 
-        // Create voucher code
-        const voucherCode = await unifi.create(types(req.body['voucher-type'] === 'custom' ? `${req.body['voucher-duration']},${req.body['voucher-usage']},${req.body['voucher-upload-limit']},${req.body['voucher-download-limit']},${req.body['voucher-data-limit']};` : req.body['voucher-type'], true), parseInt(req.body['voucher-amount'])).catch((e) => {
+        // Create voucher code        
+        let note = null
+        if (req.body['voucher-note']) {
+            note = req.body['voucher-note'] ;
+        }
+        
+        const voucherCode = await unifi.create(
+               types(
+                    req.body['voucher-type'] === 'custom' ? `${req.body['voucher-duration']},                    
+                    ${req.body['voucher-usage']},
+                    ${req.body['voucher-upload-limit']},
+                    ${req.body['voucher-download-limit']},
+                    ${req.body['voucher-data-limit']};` : req.body['voucher-type'], true
+                ),
+                parseInt(req.body['voucher-amount']),
+                true,
+                note,
+               ).catch((e) => {
             res.cookie('flashMessage', JSON.stringify({type: 'error', message: e}), {httpOnly: true, expires: new Date(Date.now() + 24 * 60 * 60 * 1000)}).redirect(302, `${req.headers['x-ingress-path'] ? req.headers['x-ingress-path'] : ''}/vouchers`);
         });
 
@@ -212,12 +229,13 @@ if(variables.serviceWeb) {
 
             const vouchers = await unifi.list().catch((e) => {
                 log.error('[Cache] Error requesting vouchers!');
-                res.cookie('flashMessage', JSON.stringify({type: 'error', message: e}), {httpOnly: true, expires: new Date(Date.now() + 24 * 60 * 60 * 1000)}).redirect(302, `${req.headers['x-ingress-path'] ? req.headers['x-ingress-path'] : ''}/vouchers`);
+                res.cookie('flashMessage', JSON.stringify({type: 'error', message: e}), {httpOnly: true, expires: new Date(Date.now() + 24 * 60 * 60 * 1000)}).redirect(302, `${req.headers['x-ingress-path'] ? req.headers['x-ingress-path'] : ''}/vouchers`);                
             });
 
-            if(vouchers) {
+            if(vouchers) {                
                 cache.vouchers = vouchers;
                 cache.updated = new Date().getTime();
+                cache.batches = unifi.batches(vouchers);
                 log.info(`[Cache] Saved ${vouchers.length} voucher(s)`);
 
                 res.cookie('flashMessage', JSON.stringify({type: 'info', message: parseInt(req.body['voucher-amount']) > 1 ? `${req.body['voucher-amount']} Vouchers Created!` : `Voucher Created: ${voucherCode}`}), {httpOnly: true, expires: new Date(Date.now() + 24 * 60 * 60 * 1000)}).redirect(302, `${req.headers['x-ingress-path'] ? req.headers['x-ingress-path'] : ''}/vouchers`);
@@ -241,6 +259,7 @@ if(variables.serviceWeb) {
             if(vouchers) {
                 cache.vouchers = vouchers;
                 cache.updated = new Date().getTime();
+                cache.batches = unifi.batches(vouchers);
                 log.info(`[Cache] Saved ${vouchers.length} voucher(s)`);
 
                 res.cookie('flashMessage', JSON.stringify({type: 'info', message: `Voucher Removed!`}), {httpOnly: true, expires: new Date(Date.now() + 24 * 60 * 60 * 1000)}).redirect(302, `${req.headers['x-ingress-path'] ? req.headers['x-ingress-path'] : ''}/vouchers`);
@@ -257,7 +276,7 @@ if(variables.serviceWeb) {
             return e._id === req.params.id;
         });
 
-        if(voucher) {
+        if(voucher) {            
             res.render('components/print', {
                 baseUrl: req.headers['x-ingress-path'] ? req.headers['x-ingress-path'] : '',
                 languages,
@@ -308,6 +327,96 @@ if(variables.serviceWeb) {
             });
         }
     });
+
+
+    // print multiple vouchers as PDF
+    app.get('/vouchers/batch/:batch/pdf', [authorization.web], async (req, res) => {
+        if(variables.printerType === '') {
+            res.status(501).send();
+            return;
+        }
+
+        const batchToPrint = req.params.batch ;
+        // console.log('batch print filter:', batchToPrint);
+        
+        const vouchers = cache.vouchers.filter( (e) => {        
+            return ( batchToPrint === null || batchToPrint === 'all' || unifi.batchItemID(e).id === batchToPrint ) ;            
+        });        
+
+        // console.log('printing vouchers', vouchers)
+
+        if(vouchers) {            
+            const buffers = await printVoucherList.pdf(vouchers);
+            const pdfData = Buffer.concat(buffers);
+            res.writeHead(200, {
+                'Content-Length': Buffer.byteLength(pdfData),
+                'Content-Type': 'application/pdf',
+                'Content-Disposition': `attachment;filename=voucher_${batchToPrint}.pdf`
+            }).end(pdfData);                        
+        } else {
+            res.status(404);
+            res.render('404', {
+                baseUrl: req.headers['x-ingress-path'] ? req.headers['x-ingress-path'] : ''
+            });
+        }
+    });
+
+
+    app.get('/vouchers/batch/:batch/:status/:quota/pdf', [authorization.web], async (req, res) => {
+        if(variables.printerType === '') {
+            res.status(501).send();
+            return;
+        }
+
+        const batchToPrint = req.params.batch ;
+        const statusToPrint = req.params.status ;
+        const quotaToPrint = req.params.quota ;
+        
+        const vouchers = cache.vouchers.filter((item) => {
+            if(statusToPrint === 'expired') {
+                return item.status ==="EXPIRED" ;
+            }
+            if(statusToPrint === 'available') {
+                return item.used === 0;
+            }
+
+            if(statusToPrint === 'in-use') {
+                return item.used > 0;
+            }
+
+            return true;
+        }).filter((item) => {
+            if (item.status !== "EXPIRED") {            
+                if(quotaToPrint === 'multi-use') {
+                    return item.quota !== 0;
+                }
+
+                if(quotaToPrint === 'single-use') {
+                    return item.quota === 1;
+                }
+            }
+            return true ;
+        }).filter((item) => {
+            // true for "all", otherwise compare ids
+            return ( batchToPrint == null || batchToPrint =='all' || unifi.batchItemID(item).id === batchToPrint ) ;
+        });        
+
+        if(vouchers) {            
+            const buffers = await printVoucherList.pdf(vouchers);
+            const pdfData = Buffer.concat(buffers);
+            res.writeHead(200, {
+                'Content-Length': Buffer.byteLength(pdfData),
+                'Content-Type': 'application/pdf',
+                'Content-Disposition': `attachment;filename=voucher_${batchToPrint}.pdf`
+            }).end(pdfData);                        
+        } else {
+            res.status(404);
+            res.render('404', {
+                baseUrl: req.headers['x-ingress-path'] ? req.headers['x-ingress-path'] : ''
+            });
+        }
+    });
+
     app.get('/voucher/:id/email', [authorization.web], async (req, res) => {
         if(variables.smtpFrom === '' || variables.smtpHost === '' || variables.smtpPort === '') {
             res.status(501).send();
@@ -385,6 +494,8 @@ if(variables.serviceWeb) {
             if(vouchers && guests) {
                 cache.vouchers = vouchers;
                 cache.guests = guests;
+
+                cache.batches = unifi.batches(vouchers);                
                 cache.updated = new Date().getTime();
                 log.info(`[Cache] Saved ${vouchers.length} voucher(s)`);
                 log.info(`[Cache] Saved ${guests.length} guest(s)`);
@@ -399,6 +510,7 @@ if(variables.serviceWeb) {
 
         res.render('voucher', {
             baseUrl: req.headers['x-ingress-path'] ? req.headers['x-ingress-path'] : '',
+            sitename: variables.unifiSiteName,
             gitTag: variables.gitTag,
             gitBuild: variables.gitBuild,
             user: user,
@@ -415,12 +527,17 @@ if(variables.serviceWeb) {
             voucher_types: types(variables.voucherTypes),
             voucher_custom: variables.voucherCustom,
             vouchers: cache.vouchers.filter((item) => {
+
+                if(req.query.status === 'expired') {
+                    return item.status ==="EXPIRED" ;
+                }
+
                 if(req.query.status === 'available') {
                     return item.used === 0;
                 }
 
                 if(req.query.status === 'in-use') {
-                    return item.used > 0;
+                    return (item.used > 0) && (item.status!="EXPIRED");
                 }
 
                 return true;
@@ -433,7 +550,11 @@ if(variables.serviceWeb) {
                     return item.quota !== 0;
                 }
 
-                return true;
+                return true ;
+            }).filter((item) => {
+                // true for "all", otherwise compare ids
+                return ( req.query.batch == null || req.query.batch =='all' || unifi.batchItemID(item).id === req.query.batch ) ;
+                
             }).sort((a, b) => {
                 if(req.query.sort === 'code') {
                     if (a.code > b.code) return -1;
@@ -453,9 +574,11 @@ if(variables.serviceWeb) {
             updated: cache.updated,
             filters: {
                 status: req.query.status,
-                quota: req.query.quota
+                quota: req.query.quota,
+                batch: req.query.batch,
+                batches: cache.batches,
             },
-            sort: req.query.sort
+            sort: req.query.sort            
         });
     });
     app.get('/voucher/:id', [authorization.web], async (req, res) => {

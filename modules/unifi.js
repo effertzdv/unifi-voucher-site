@@ -8,6 +8,7 @@ const unifi = require('node-unifi');
  */
 const variables = require('./variables');
 const log = require('./log');
+const moment = require('moment');
 
 /**
  * UniFi Settings
@@ -65,12 +66,24 @@ const startSession = () => {
     });
 }
 
+const internal_batchItemID = (item) => {
+    if (item.note != "" && item.note != null) {            
+        return { id: "note_" + item.note , name: item.note } ;
+    }
+
+    // use create time of no note was given
+    // const myDate = new Date(item.create_time * 1000);
+    const dateString = moment.unix(item.create_time).format("YYYY-MM-DD HH:mm:ss");
+    return { id: "created_" + item.create_time, name: dateString};                
+}
+
 /**
  * UniFi module functions
  *
  * @type {{create: (function(*, number=, boolean=): Promise<*>), list: (function(boolean=): Promise<*>), remove: (function(*, boolean=): Promise<*>)}}
  */
-const unifiModule = {
+const unifiModule = {    
+
     /**
      * Creates a new UniFi Voucher
      *
@@ -79,10 +92,10 @@ const unifiModule = {
      * @param retry
      * @return {Promise<unknown>}
      */
-    create: (type, amount = 1, retry = true) => {
+    create: (type, amount = 1, retry = true, note=null) => {
         return new Promise((resolve, reject) => {
             startSession().then(() => {
-                controller.createVouchers(type.expiration, amount, parseInt(type.usage) === 1 ? 1 : 0, null, typeof type.upload !== "undefined" ? type.upload : null, typeof type.download !== "undefined" ? type.download : null, typeof type.megabytes !== "undefined" ? type.megabytes : null).then((voucher_data) => {
+                controller.createVouchers(type.expiration, amount, parseInt(type.usage) === 1 ? 1 : 0, note, typeof type.upload !== "undefined" ? type.upload : null, typeof type.download !== "undefined" ? type.download : null, typeof type.megabytes !== "undefined" ? type.megabytes : null).then((voucher_data) => {
                     if(amount > 1) {
                         log.info(`[UniFi] Created ${amount} vouchers`);
                         resolve(true);
@@ -188,6 +201,7 @@ const unifiModule = {
             startSession().then(() => {
                 controller.getVouchers().then((vouchers) => {
                     log.info(`[UniFi] Found ${vouchers.length} voucher(s)`);
+                    // log.info('vouchers:',JSON.stringify(vouchers));                
                     resolve(vouchers);
                 }).catch((e) => {
                     log.error('[UniFi] Error while getting vouchers!');
@@ -267,6 +281,35 @@ const unifiModule = {
                 reject(e);
             });
         });
+    },
+
+    batchItemID: (item) => {
+        return internal_batchItemID(item) ;        
+    },
+
+    /**
+     * Returns a list with all UniFi voucher notes
+     *
+     * @param vouchers
+     * @return Array of batch names
+     */
+    batches: (vouchers) => {
+        let batches= [] ;        
+
+        vouchers.forEach( (voucher) => {            
+            let newBatch = internal_batchItemID(voucher) ;
+            
+            let found = false ;
+            batches.forEach( (batch) => {
+                if ( batch.id == newBatch.id ) {
+                    found = true;
+                    return ;
+                }}
+            );            
+
+            if ( found == false) batches.push(newBatch) ;
+        } ) ;        
+        return batches ;
     }
 }
 

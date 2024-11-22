@@ -6,5 +6,6 @@
 module.exports = {
     vouchers: [],
     guests: [],
+    batches: [],
     updated: 0
 };
