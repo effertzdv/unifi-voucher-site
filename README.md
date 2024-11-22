@@ -5,7 +5,7 @@ Changes so far:
 ## Batch filtering
 Similar to the UNIFI hotspot portal the note ("name") is displayed and can be filtered by
 
-![Vouchers Overview - Desktop](.docs/images/batch_view.png)
+![Vouchers Overview - Desktop](.docs/images/batch-view.png)
 
 ## PDF output with multiple vouchers on a single page
 Added PDF output for a multiple vouchers on multiple A4 pages
