@@ -15,7 +15,7 @@ Added PDF output for a multiple vouchers on multiple A4 pages
 ## Minor adjustements
 - the expired status was never shown
 - multi-use / single-use didn't work correct for vouchers with a limited number of uses. E.g. 4x uses allowed was display as single-use voucher
-- add a variable sitename. This name is added to the header (if defined) - helps to distinguish multiple sites
+- added a variable unifiSiteName/UNIFI_SITENAME. This name is added to the header (if defined) - helps to distinguish multiple sites.
 
 
 
