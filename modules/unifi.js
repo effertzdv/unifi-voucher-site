@@ -200,8 +200,7 @@ const unifiModule = {
         return new Promise((resolve, reject) => {
             startSession().then(() => {
                 controller.getVouchers().then((vouchers) => {
-                    log.info(`[UniFi] Found ${vouchers.length} voucher(s)`);
-                    // log.info('vouchers:',JSON.stringify(vouchers));                
+                    log.info(`[UniFi] Found ${vouchers.length} voucher(s)`);                    
                     resolve(vouchers);
                 }).catch((e) => {
                     log.error('[UniFi] Error while getting vouchers!');
